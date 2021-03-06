@@ -26,6 +26,15 @@ public class MainVerticle extends AbstractVerticle {
         .end(store.getAll().encode());
     });
 
+    //GET /books/:isbn
+    books.get("/books/:isbn").handler(req -> {
+      final String key = req.pathParam("isbn");
+      final Book findingBook = store.get(key);
+      req.response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .end(JsonObject.mapFrom(findingBook).encode());
+    });
+
     //POST /books
     books.post("/books").handler(req -> {
       //read body
@@ -49,6 +58,8 @@ public class MainVerticle extends AbstractVerticle {
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
         .end(JsonObject.mapFrom(updatedBook).encode());
     });
+
+
 
     books.errorHandler(500, event -> {
       System.err.println("Failed: " + event.failure());

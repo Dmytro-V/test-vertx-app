@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 public class InMemoryBooksStore {
 
@@ -22,6 +23,15 @@ public class InMemoryBooksStore {
      });
      return all;
    }
+
+  public Book get(String isbn) {
+    Long key = Long.parseLong(isbn);
+    Book findingBook = books.get(key);
+    if (findingBook == null) {
+      throw new NoSuchElementException("ISBN not found");
+    }
+    return findingBook;
+  }
 
   public void add(final Book entry) {
     books.put(entry.getIsbn(), entry);

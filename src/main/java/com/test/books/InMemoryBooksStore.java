@@ -46,4 +46,13 @@ public class InMemoryBooksStore {
     books.put(key, entry);
     return entry;
   }
+
+  public Book delete(String isbn) {
+    Long key = Long.parseLong(isbn);
+    Book deleteBook = books.remove(key);
+    if (deleteBook == null) {
+      throw new NoSuchElementException("ISBN not found");
+    }
+    return deleteBook;
+  }
 }

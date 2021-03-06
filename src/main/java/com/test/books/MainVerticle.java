@@ -49,7 +49,7 @@ public class MainVerticle extends AbstractVerticle {
         .end(requestBody.encode());
     });
 
-    //PUT /books/isbn
+    //PUT /books/:isbn
     books.put("/books/:isbn").handler(req -> {
       final String key = req.pathParam("isbn");
       final JsonObject requestBody = req.getBodyAsJson();
@@ -57,6 +57,15 @@ public class MainVerticle extends AbstractVerticle {
       req.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
         .end(JsonObject.mapFrom(updatedBook).encode());
+    });
+
+    //DELETE /books/:isbn
+    books.delete("/books/:isbn").handler(req -> {
+      final String key = req.pathParam("isbn");
+      final Book deletedBook = store.delete(key);
+      req.response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .end(JsonObject.mapFrom(deletedBook).encode());
     });
 
 

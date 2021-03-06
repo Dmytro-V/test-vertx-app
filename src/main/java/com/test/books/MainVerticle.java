@@ -33,12 +33,28 @@ public class MainVerticle extends AbstractVerticle {
       System.out.println("Request Body: " + requestBody);
       //store
       store.add(requestBody.mapTo(Book.class));
-
       //return response
       req.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
         .setStatusCode(HttpResponseStatus.CREATED.code())
         .end(requestBody.encode());
+    });
+
+    //PUT /books/isbn
+    books.put("/books/:isbn").handler(req -> {
+      final String key = req.pathParam("isbn");
+      final JsonObject requestBody = req.getBodyAsJson();
+      final Book updatedBook = store.update(key, requestBody.mapTo(Book.class));
+      req.response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .end(JsonObject.mapFrom(updatedBook).encode());
+    });
+
+    books.errorHandler(500, event -> {
+      System.err.println("Failed: " + event.failure());
+      event.response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .end(new JsonObject().put("error", event.failure().getMessage()).encode());
     });
 
     vertx.createHttpServer()

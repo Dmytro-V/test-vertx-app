@@ -26,4 +26,14 @@ public class InMemoryBooksStore {
   public void add(final Book entry) {
     books.put(entry.getIsbn(), entry);
   }
+
+  public Book update(String isbn, Book entry) {
+    Long key = Long.parseLong(isbn);
+    if (!key.equals(entry.getIsbn())) {
+      throw new IllegalArgumentException("ISBN does not match!");
+    }
+
+    books.put(key, entry);
+    return entry;
+  }
 }

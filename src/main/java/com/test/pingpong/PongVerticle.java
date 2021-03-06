@@ -1,4 +1,4 @@
-package com.test.vertxApp;
+package com.test.pingpong;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.json.JsonObject;

@@ -19,23 +19,61 @@ public class MainVerticle extends AbstractVerticle {
     books.route().handler(BodyHandler.create());
 
     //GET /books
-    books.get("/books").handler(req -> {
-      //Return response
-      req.response()
-        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .end(store.getAll().encode());
-    });
-
+    getAll(books);
     //GET /books/:isbn
-    books.get("/books/:isbn").handler(req -> {
+    getBookByISBN(books);
+    //POST /books
+    createBook(books);
+    //PUT /books/:isbn
+    updateBook(books);
+    //DELETE /books/:isbn
+    deleteBook(books);
+
+    registerErrorHandler(books);
+
+    vertx.createHttpServer()
+      .requestHandler(books)
+      .listen(8888, http -> {
+      if (http.succeeded()) {
+        startFuture.complete();
+        System.out.println("HTTP server strated on port 8888");
+      } else {
+        startFuture.fail(http.cause());
+      }
+    });
+  }
+
+  private void registerErrorHandler(Router books) {
+    books.errorHandler(500, event -> {
+      System.err.println("Failed: " + event.failure());
+      event.response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .end(new JsonObject().put("error", event.failure().getMessage()).encode());
+    });
+  }
+
+  private void deleteBook(Router books) {
+    books.delete("/books/:isbn").handler(req -> {
       final String key = req.pathParam("isbn");
-      final Book findingBook = store.get(key);
+      final Book deletedBook = store.delete(key);
       req.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .end(JsonObject.mapFrom(findingBook).encode());
+        .end(JsonObject.mapFrom(deletedBook).encode());
     });
+  }
 
-    //POST /books
+  private void updateBook(Router books) {
+    books.put("/books/:isbn").handler(req -> {
+      final String key = req.pathParam("isbn");
+      final JsonObject requestBody = req.getBodyAsJson();
+      final Book updatedBook = store.update(key, requestBody.mapTo(Book.class));
+      req.response()
+        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .end(JsonObject.mapFrom(updatedBook).encode());
+    });
+  }
+
+  private void createBook(Router books) {
     books.post("/books").handler(req -> {
       //read body
       final JsonObject requestBody = req.getBodyAsJson();
@@ -48,44 +86,24 @@ public class MainVerticle extends AbstractVerticle {
         .setStatusCode(HttpResponseStatus.CREATED.code())
         .end(requestBody.encode());
     });
+  }
 
-    //PUT /books/:isbn
-    books.put("/books/:isbn").handler(req -> {
+  private void getBookByISBN(Router books) {
+    books.get("/books/:isbn").handler(req -> {
       final String key = req.pathParam("isbn");
-      final JsonObject requestBody = req.getBodyAsJson();
-      final Book updatedBook = store.update(key, requestBody.mapTo(Book.class));
+      final Book findingBook = store.get(key);
       req.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .end(JsonObject.mapFrom(updatedBook).encode());
+        .end(JsonObject.mapFrom(findingBook).encode());
     });
+  }
 
-    //DELETE /books/:isbn
-    books.delete("/books/:isbn").handler(req -> {
-      final String key = req.pathParam("isbn");
-      final Book deletedBook = store.delete(key);
+  private void getAll(Router books) {
+    books.get("/books").handler(req -> {
+      //Return response
       req.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .end(JsonObject.mapFrom(deletedBook).encode());
-    });
-
-
-
-    books.errorHandler(500, event -> {
-      System.err.println("Failed: " + event.failure());
-      event.response()
-        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .end(new JsonObject().put("error", event.failure().getMessage()).encode());
-    });
-
-    vertx.createHttpServer()
-      .requestHandler(books)
-      .listen(8888, http -> {
-      if (http.succeeded()) {
-        startFuture.complete();
-        System.out.println("HTTP server strated on port 8888");
-      } else {
-        startFuture.fail(http.cause());
-      }
+        .end(store.getAll().encode());
     });
   }
 

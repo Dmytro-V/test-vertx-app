@@ -11,6 +11,7 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.StaticHandler;
 
 public class MainVerticle extends AbstractVerticle {
 
@@ -21,6 +22,7 @@ public class MainVerticle extends AbstractVerticle {
   public void start(Promise<Void> startPromise) throws Exception {
     Router books = Router.router(vertx);
     books.route().handler(BodyHandler.create());
+    books.route("/*").handler(StaticHandler.create());
 
     //GET /books
     getAll(books);
@@ -50,8 +52,16 @@ public class MainVerticle extends AbstractVerticle {
   private void registerErrorHandler(Router books) {
     books.errorHandler(500, event -> {
       LOG.error("Failed: ", event.failure());
+      if (event.failure() instanceof IllegalArgumentException) {
+        event.response()
+          .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+          .setStatusCode(HttpResponseStatus.BAD_REQUEST.code())
+          .end(new JsonObject().put("error", event.failure().getMessage()).encode());
+        return;
+      }
       event.response()
         .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+        .setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code())
         .end(new JsonObject().put("error", event.failure().getMessage()).encode());
     });
   }

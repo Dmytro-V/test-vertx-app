@@ -1,5 +1,6 @@
 package com.test.books.jdbc;
 
+import com.test.books.Book;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -40,5 +41,48 @@ public class JDBCBookRepository {
     });
 
     return getAll;
+  }
+
+  public Future<Void> add(Book bookToAdd) {
+    final Future<Void> added = Future.future();
+    final JsonArray params = new JsonArray()
+      .add(bookToAdd.getIsbn())
+      .add(bookToAdd.getTitle());
+    sql.updateWithParams("INSERT INTO books (isbn, title) VALUES (?, ?)", params, ar -> {
+      //return error
+      if (ar.failed()) {
+        added.fail(ar.cause());
+        return;
+      }
+      //return failure if updated count is not 1
+      if (ar.result().getUpdated() != 1) {
+        added.fail(new IllegalStateException("Wrong update count on insert" + ar.result()));
+        return;
+      }
+      //return succes
+      added.complete();
+    });
+    return added;
+  }
+
+  public Future<String> delete(final String isbn) {
+    final Future<String> deleted = Future.future();
+    JsonArray params = new JsonArray().add(Long.parseLong(isbn));
+    sql.updateWithParams("DELETE FROM books WHERE books.isbn = ?", params, ar -> {
+      //return error
+      if (ar.failed()) {
+        deleted.fail(ar.cause());
+        return;
+      }
+      //nothing was deleted
+      if (ar.result().getUpdated() == 0) {
+        deleted.complete();
+        return;
+      }
+      //return deleted isbn
+      deleted.complete(isbn);
+    });
+
+    return deleted;
   }
 }

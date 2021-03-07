@@ -76,11 +76,23 @@ public class JDBCMainVerticle extends AbstractVerticle {
 
   private void deleteBook(Router books) {
     books.delete("/books/:isbn").handler(req -> {
-      final String key = req.pathParam("isbn");
-      final Book deletedBook = store.delete(key);
-      req.response()
-        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .end(JsonObject.mapFrom(deletedBook).encode());
+      final String isbn = req.pathParam("isbn");
+
+      bookRepository.delete(isbn).setHandler(ar -> {
+        if (ar.failed()) {
+          req.fail(ar.cause());
+        }
+        if (ar.result() == null) {
+          req.response()
+            .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+            .setStatusCode(HttpResponseStatus.NOT_FOUND.code())
+            .end(new JsonObject().put("error", "Book not found").encode());
+        } else {
+          req.response()
+            .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+            .end(new JsonObject().put("isbn", ar.result()).encode());
+        }
+      });
     });
   }
 
@@ -101,12 +113,15 @@ public class JDBCMainVerticle extends AbstractVerticle {
       final JsonObject requestBody = req.getBodyAsJson();
       LOG.info("Request Body: ", requestBody);
       //store
-      store.add(requestBody.mapTo(Book.class));
-      //return response
-      req.response()
-        .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
-        .setStatusCode(HttpResponseStatus.CREATED.code())
-        .end(requestBody.encode());
+      bookRepository.add(requestBody.mapTo(Book.class)).setHandler(ar -> {
+        if (ar.failed()) {
+          req.fail(ar.cause());
+        }
+        req.response()
+          .putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON)
+          .setStatusCode(HttpResponseStatus.CREATED.code())
+          .end(requestBody.encode());
+      });
     });
   }
 
